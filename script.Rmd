@@ -1,0 +1,124 @@
+---
+title: "API Data Processing - US Census Bureau's API (Poverty Statistics)"
+author: "Xibei Chen"
+date: "20/11/2021"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,include=FALSE}
+# Load packages
+library(rvest)
+library(data.table)
+library(jsonlite)
+library(httr)
+library(tidyverse)
+```
+
+### Introduction
+The aim of this project is to practice calling API and then process the data in the JSON response. I chose to use one of US Census Bureau's APIs - Poverty Statistics: CPS & SAIPE (Time Series: various years). And I would also like to see if there is any significant difference among different races. 
+
+### Create a function to get poverty data for a given time interval
+```{r}
+get_poverty_data <- function(from, to) {
+        
+        # Create a list for the years in the given time interval
+        years <- as.list(from:to)
+        
+        # Create a function to get poverty data for one year
+        get_one_year <- function(year){
+                
+                # Create urls for different races for one year
+                urls <- paste0('https://api.census.gov/data/timeseries/poverty/histpov2?get=PCTPOV&time=', year,'&RACE=',as.list(list(1,2,7,10,12)))
+                
+                # Create a function to get poverty data for one url
+                get_one_url <- function(url){
+                        
+                        df <- data.frame('pctpov'= double(),
+                                         'year'= character(),
+                                         'race_no' = character())
+                        
+                        res <- httr::GET(url)
+                        content <- fromJSON(content(res,"text"))
+                        df[nrow(df)+1,] <- content[2,]
+                        
+                        return(df)
+                        
+                }
+                
+                # Apply the get_one_url function to all urls to get the poverty data for one year
+                list_of_dfs <- lapply(urls, get_one_url)
+                one_year_df <- rbindlist(list_of_dfs)
+
+        }
+        
+        # Apply the get_one_year functions to all the years in the given time interval
+        list_of_years_dfs <- lapply(years, get_one_year)
+        final_df <- rbindlist(list_of_years_dfs)
+        
+        # Create a race look up table
+        race_list <- data.frame(race_no = c(1,2,7,10,12),
+                                race = c('All Races', 
+                                         'White', 
+                                         'Black',
+                                         'Asian',
+                                         'Hispanic'))
+        
+        # Convert type to double
+        final_df$race_no <- as.double(final_df$race_no)
+
+        
+        # Merge the poverty data table with race look up table
+        joined_df <- merge(final_df, race_list, by = "race_no")
+
+        return(joined_df)
+                
+}
+```
+
+
+### Execute the above function to get poverty data from 2008 to 2018
+```{r}
+df <- get_poverty_data(2008,2018)
+head(df)
+```
+
+
+### Exploratory Data Analysis
+#### 1. Exploring the trend of percent of people in poverty in the US over time
+```{r, echo=FALSE, warning= FALSE, fig.align = 'center'}
+
+df_all <- df %>% filter(race=="All Races")
+df_all %>% 
+        ggplot(aes(x=year, y=pctpov))+
+        geom_col(fill='#34a0a4')+
+        labs(x=element_blank(),y=element_blank(),title = "Percent of People in Poverty in the US (2008-2018)" )+
+        theme_minimal()
+
+```
+From the chart we can see that from 2008 to 2018, the percent of people in poverty in the US is at its peak in 2010 and then decreases gradually during the following years, and in 2018 it is at its lowest around 11.8%.
+
+#### 2. Exploring difference among races in terms of poverty statistics
+```{r, echo=FALSE, warning= FALSE, fig.align = 'center'}
+df_not_all <- df %>% filter(race!="All Races") %>% mutate(pctpov=as.double(pctpov))
+df_not_all %>% 
+        ggplot(aes(x=year, y=pctpov, fill=factor(race)))+
+        geom_bar(stat="identity",position="dodge")+
+        scale_fill_brewer(palette = "Accent")+
+        scale_y_continuous(breaks = seq(0,30,5),limits = c(0,30))+
+        labs(x=element_blank(),y=element_blank(),title = "Compare Different Races - Percent of People in Poverty in the US (2008-2018) " )+
+        theme_minimal() %+replace% 
+        theme(legend.title=element_blank())
+```
+With this dodged bar chart, first of all we can tell that there is a significant difference among races in terms of the percent of people in poverty. For asian and white, the statistics are relatively low at around 11% and quite stable. However, the statistics for black and hispanic are around double the statistics for asian and white, which confirms my assumption. Besides, the trend of the statistics for black and hispanic are more similar to the whole population shown in the first chart, it might be the result of them having more people in poverty therefore having a bigger effect on the statistics for the whole population.
+
+### Summary
+To sum up, I had fun playing around with using the API of the US Census Bureau, creating a function in R to extract the data in JSON format, and eventually store the data in table format. The data visuals I created in the end also helped to confirm my assumption that there is a significant difference among different ethnic groups regarding wealth distribution in the US, which might be the result of meritocracy and institutional racism in the US.
+
+                
