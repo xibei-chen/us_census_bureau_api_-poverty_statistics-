@@ -11,7 +11,9 @@ You can read more about how the script works and the relevant data visuals in th
 
 ## Exploratory Data Analysis
 1. Exploring the trend of percent of people in poverty in the US over time
-2. Exploring difference among races in terms of poverty statistics
+<img src="/visuals/poverty.png" width="600" height="500">
+3. Exploring difference among races in terms of poverty statistics
+<img src="/visuals/poverty_across_races.png" width="600" height="500">
 
 ## Conclusions
 From 2008 to 2018, the percent of people in poverty in the US is at its peak in 2010 and then decreases gradually during the following years, and in 2018 it is at its lowest around 11.8%. There is a significant difference among races in terms of the percent of people in poverty. For asian and white, the statistics are relatively low at around 11% and quite stable. However, the statistics for black and hispanic are around double the statistics for asian and white, which confirms my assumption. Besides, the trend of the statistics for black and hispanic are more similar to the whole population shown in the first chart, it might be the result of them having more people in poverty therefore having a bigger effect on the statistics for the whole population. The data visuals I created helped to confirm my assumption that there is a significant difference among different ethnic groups regarding wealth distribution in the US, which might be the result of meritocracy and institutional racism in the US.
